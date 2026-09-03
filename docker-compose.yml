@@ -1,0 +1,262 @@
+name: smartly-banking-ai-platform
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: core_banking
+      POSTGRES_USER: core_banking
+      POSTGRES_PASSWORD: local-only-password
+    volumes:
+      - core-banking-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U core_banking -d core_banking"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.5
+    volumes:
+      - qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/6333'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  core-banking-simulator:
+    build:
+      context: ./simulators/core-banking
+    environment:
+      SERVER_PORT: "8090"
+      DB_URL: jdbc:postgresql://postgres:5432/core_banking
+      DB_USERNAME: core_banking
+      DB_PASSWORD: local-only-password
+      INTERNAL_AUTH_DEV_MODE: "true"
+      SIMULATOR_FAULTS_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8090/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+    networks: [smartly-platform]
+
+  policy-engine:
+    build:
+      context: ./ai-platform/policy-engine
+    environment:
+      OTEL_SERVICE_NAME: policy-engine
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  account-agent:
+    build:
+      context: ./agents/account-agent
+    environment:
+      CORE_BANKING_URL: http://core-banking-simulator:8090
+      CORE_BANKING_TIMEOUT_SECONDS: "1.5"
+      OTEL_SERVICE_NAME: account-agent
+    depends_on:
+      core-banking-simulator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  card-agent:
+    build:
+      context: ./agents/card-agent
+    environment:
+      CORE_BANKING_URL: http://core-banking-simulator:8090
+      CORE_BANKING_TIMEOUT_SECONDS: "1.5"
+      OTEL_SERVICE_NAME: card-agent
+    depends_on:
+      core-banking-simulator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  transfer-agent:
+    build:
+      context: ./agents/transfer-agent
+    environment:
+      CORE_BANKING_URL: http://core-banking-simulator:8090
+      CORE_BANKING_TIMEOUT_SECONDS: "1.5"
+      OTEL_SERVICE_NAME: transfer-agent
+    depends_on:
+      core-banking-simulator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  customer-agent:
+    build:
+      context: ./agents/customer-agent
+    environment:
+      CORE_BANKING_URL: http://core-banking-simulator:8090
+      CORE_BANKING_TIMEOUT_SECONDS: "1.5"
+      OTEL_SERVICE_NAME: customer-agent
+    depends_on:
+      core-banking-simulator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  knowledge-ingestion:
+    image: smartly-knowledge-agent:local
+    build:
+      context: ./agents/knowledge-agent
+    command: ["python", "-m", "app.cli.ingest", "knowledge_base/demo"]
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: smartly_knowledge
+      VECTOR_STORE: qdrant
+      EMBEDDING_PROVIDER: deterministic
+      EMBEDDING_DIMENSIONS: "128"
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    restart: "no"
+    networks: [smartly-platform]
+
+  knowledge-agent:
+    image: smartly-knowledge-agent:local
+    build:
+      context: ./agents/knowledge-agent
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: smartly_knowledge
+      VECTOR_STORE: qdrant
+      EMBEDDING_PROVIDER: deterministic
+      EMBEDDING_DIMENSIONS: "128"
+      MAX_CONTEXT_CHARACTERS: "6000"
+      OTEL_SERVICE_NAME: knowledge-agent
+    depends_on:
+      knowledge-ingestion:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)); assert data['status']=='UP'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  agent-registry:
+    build:
+      context: ./ai-platform/agent-registry
+    environment:
+      AGENT_REGISTRY_CONFIG: config/agents.yaml
+    depends_on:
+      account-agent:
+        condition: service_healthy
+      card-agent:
+        condition: service_healthy
+      transfer-agent:
+        condition: service_healthy
+      customer-agent:
+        condition: service_healthy
+      knowledge-agent:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8082/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  ai-orchestrator:
+    build:
+      context: ./ai-platform/orchestrator
+    environment:
+      AGENT_REGISTRY_URL: http://agent-registry:8082
+      POLICY_ENGINE_URL: http://policy-engine:8081
+      REDIS_URL: redis://redis:6379/0
+      LLM_PROVIDER: ${LLM_PROVIDER:-heuristic}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-ollama}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2}
+      DEV_AUTH_MODE: "false"
+      OTEL_SERVICE_NAME: ai-orchestrator
+    depends_on:
+      redis:
+        condition: service_healthy
+      policy-engine:
+        condition: service_healthy
+      agent-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=2)); assert data['status']=='UP'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [smartly-platform]
+
+  mobile-bff:
+    build:
+      context: ./channels/mobile-bff
+    environment:
+      SERVER_PORT: "8080"
+      AI_ORCHESTRATOR_URL: http://ai-orchestrator:8080
+      MOBILE_AUTH_DEMO_MODE: "true"
+      ORCHESTRATOR_CONNECT_TIMEOUT: 1s
+      ORCHESTRATOR_READ_TIMEOUT: 30s
+      ORCHESTRATOR_RETRY_ATTEMPTS: "2"
+    depends_on:
+      ai-orchestrator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    ports:
+      - "8080:8080"
+    networks: [smartly-platform]
+
+networks:
+  smartly-platform:
+    name: smartly-platform
+
+volumes:
+  core-banking-postgres:
+  redis-data:
+  qdrant-data:
