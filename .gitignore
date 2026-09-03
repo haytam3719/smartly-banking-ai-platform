@@ -15,6 +15,7 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.test-tmp*/
 .mypy_cache/
 node_modules/
 dist/
@@ -28,4 +29,3 @@ coverage/
 .tmp/
 tmp/
 data/
-
