@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling>=1.25,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "smartly-card-agent"
+version = "0.1.0"
+description = "Read-only card information capability boundary"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi==0.115.5", "pydantic==2.10.2", "uvicorn[standard]==0.32.1",
+  "httpx==0.27.2", "tenacity==9.0.0", "python-json-logger==3.2.1",
+  "prometheus-client==0.21.0", "opentelemetry-api==1.28.2",
+  "opentelemetry-sdk==1.28.2", "opentelemetry-exporter-otlp-proto-http==1.28.2",
+  "opentelemetry-instrumentation-fastapi==0.49b2", "opentelemetry-instrumentation-httpx==0.49b2"
+]
+[project.optional-dependencies]
+test = ["pytest==8.3.3", "pytest-asyncio==0.24.0", "respx==0.21.1"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/card_agent"]
+[tool.pytest.ini_options]
+addopts = "-q"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
