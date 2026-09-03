@@ -1,0 +1,56 @@
+schema_version: 1
+allow_duplicate_capabilities: false
+health_probing:
+  enabled: false
+  path: /health
+  timeout_ms: 500
+agents:
+  - id: account-agent
+    name: Account Agent
+    base_url: http://account-agent:8080
+    version: 1.0.0
+    capabilities: [account.balance.read, account.transactions.read]
+    timeout_ms: 1500
+    enabled: true
+    metadata: {owner: accounts-squad}
+  - id: card-agent
+    name: Card Agent
+    base_url: http://card-agent:8080
+    version: 1.0.0
+    capabilities: [card.info.read]
+    timeout_ms: 1500
+    enabled: true
+    metadata: {owner: cards-squad}
+  - id: transfer-agent
+    name: Transfer Agent
+    base_url: http://transfer-agent:8080
+    version: 1.0.0
+    capabilities: [transfer.status.read]
+    timeout_ms: 1500
+    enabled: true
+    metadata: {owner: payments-squad}
+  - id: customer-agent
+    name: Customer Agent
+    base_url: http://customer-agent:8080
+    version: 1.0.0
+    capabilities: [customer.info.read]
+    timeout_ms: 1500
+    enabled: true
+    metadata: {owner: customer-squad}
+  - id: knowledge-agent
+    name: Knowledge Agent
+    base_url: http://knowledge-agent:8080
+    version: 1.0.0
+    capabilities: [knowledge.search]
+    timeout_ms: 3000
+    enabled: true
+    metadata: {owner: knowledge-squad}
+  - id: account-opening-workflow
+    name: Account Opening Workflow
+    base_url: http://account-opening-workflow:8080
+    version: 1.0.0
+    capabilities: [account.opening.start, account.opening.status]
+    timeout_ms: 2500
+    enabled: true
+    metadata: {owner: onboarding-squad}
+
