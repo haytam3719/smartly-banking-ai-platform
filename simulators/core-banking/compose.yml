@@ -1,0 +1,28 @@
+name: smartly-core-banking
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: core_banking
+      POSTGRES_USER: core_banking
+      POSTGRES_PASSWORD: local-only-password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U core_banking -d core_banking"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports: ["5432:5432"]
+    volumes: ["core-banking-postgres:/var/lib/postgresql/data"]
+  simulator:
+    build: .
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/core_banking
+      DB_USERNAME: core_banking
+      DB_PASSWORD: local-only-password
+      INTERNAL_AUTH_DEV_MODE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports: ["8090:8090"]
+volumes:
+  core-banking-postgres: {}

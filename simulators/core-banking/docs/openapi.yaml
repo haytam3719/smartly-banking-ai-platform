@@ -1,0 +1,118 @@
+openapi: 3.0.3
+info:
+  title: Smartly Core Banking Simulator API
+  version: 1.0.0
+  description: Internal API backed only by deterministic synthetic banking data. No AI or lending decisions.
+servers:
+  - url: http://localhost:8090
+security:
+  - internalBearer: []
+paths:
+  /internal/v1/customers/{customerId}:
+    get:
+      operationId: getCustomer
+      parameters: [{$ref: '#/components/parameters/CustomerId'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/CorrelationId'}, {$ref: '#/components/parameters/Traceparent'}]
+      responses:
+        '200': {description: Customer, content: {application/json: {schema: {$ref: '#/components/schemas/Customer'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /internal/v1/customers/{customerId}/accounts/balance:
+    get:
+      operationId: getAccountBalances
+      parameters: [{$ref: '#/components/parameters/CustomerId'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/CorrelationId'}, {$ref: '#/components/parameters/Traceparent'}]
+      responses:
+        '200': {description: Customer accounts, content: {application/json: {schema: {$ref: '#/components/schemas/Balance'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /internal/v1/customers/{customerId}/transactions:
+    get:
+      operationId: getTransactions
+      parameters:
+        - {$ref: '#/components/parameters/CustomerId'}
+        - {name: start_date, in: query, schema: {type: string, format: date}}
+        - {name: end_date, in: query, schema: {type: string, format: date}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+        - {$ref: '#/components/parameters/RequestId'}
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/Traceparent'}
+      responses:
+        '200': {description: Filtered transactions, content: {application/json: {schema: {$ref: '#/components/schemas/Transactions'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /internal/v1/customers/{customerId}/cards/primary:
+    get:
+      operationId: getPrimaryCard
+      parameters: [{$ref: '#/components/parameters/CustomerId'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/CorrelationId'}, {$ref: '#/components/parameters/Traceparent'}]
+      responses:
+        '200': {description: Primary active card, content: {application/json: {schema: {$ref: '#/components/schemas/Card'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /internal/v1/customers/{customerId}/transfers/{transferId}:
+    get:
+      operationId: getTransfer
+      description: Returns not found for unknown and non-owned transfers alike.
+      parameters:
+        - {$ref: '#/components/parameters/CustomerId'}
+        - {name: transferId, in: path, required: true, schema: {type: string}}
+        - {$ref: '#/components/parameters/RequestId'}
+        - {$ref: '#/components/parameters/CorrelationId'}
+        - {$ref: '#/components/parameters/Traceparent'}
+      responses:
+        '200': {description: Customer-owned transfer, content: {application/json: {schema: {$ref: '#/components/schemas/Transfer'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /internal/v1/customers/{customerId}/accounts:
+    post:
+      operationId: provisionAccount
+      description: Idempotent synthetic account provisioning for an Account Opening Workflow; contains no lending logic.
+      parameters: [{$ref: '#/components/parameters/CustomerId'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/CorrelationId'}, {$ref: '#/components/parameters/Traceparent'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/CreateAccountRequest'}}}
+      responses:
+        '201': {description: Created account or identical safe retry result, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Conflicting reuse, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '422': {description: Unsupported currency, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+components:
+  securitySchemes:
+    internalBearer: {type: http, scheme: bearer, description: Lightweight local abstraction; replaced by workload identity in deployed environments.}
+  parameters:
+    CustomerId: {name: customerId, in: path, required: true, schema: {type: string}}
+    RequestId: {name: X-Request-Id, in: header, required: false, schema: {type: string, maxLength: 128}}
+    CorrelationId: {name: X-Correlation-Id, in: header, required: false, schema: {type: string, maxLength: 128}}
+    Traceparent: {name: traceparent, in: header, required: false, schema: {type: string}}
+  responses:
+    BadRequest: {description: Invalid request, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+    NotFound: {description: Resource not found or not visible in customer scope, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+  schemas:
+    Customer:
+      type: object
+      required: [customer_id, first_name, last_name, segment, kyc_status, country]
+      properties: {customer_id: {type: string}, first_name: {type: string}, last_name: {type: string}, segment: {type: string, enum: [STANDARD, PREMIUM, PRIVATE]}, kyc_status: {type: string, enum: [PENDING, VERIFIED, REJECTED]}, country: {type: string}}
+    Account:
+      type: object
+      required: [account_id, customer_id, type, currency, available_balance, status]
+      properties: {account_id: {type: string}, customer_id: {type: string}, type: {type: string, enum: [CHECKING, SAVINGS]}, currency: {type: string}, available_balance: {type: number}, status: {type: string, enum: [ACTIVE, BLOCKED, CLOSED]}}
+    Balance:
+      type: object
+      required: [customer_id, accounts]
+      properties: {customer_id: {type: string}, accounts: {type: array, items: {$ref: '#/components/schemas/Account'}}}
+    Transaction:
+      type: object
+      properties: {transaction_id: {type: string}, account_id: {type: string}, type: {type: string}, amount: {type: number}, currency: {type: string}, merchant: {type: string, nullable: true}, description: {type: string, nullable: true}, occurred_at: {type: string, format: date-time}, status: {type: string}}
+    Transactions:
+      type: object
+      properties: {customer_id: {type: string}, start_date: {type: string, format: date, nullable: true}, end_date: {type: string, format: date, nullable: true}, limit: {type: integer}, transactions: {type: array, items: {$ref: '#/components/schemas/Transaction'}}}
+    Card:
+      type: object
+      properties: {card_id: {type: string}, customer_id: {type: string}, type: {type: string}, status: {type: string}, expiration_date: {type: string, format: date}, payment_limit: {type: number}, amount_used: {type: number}, currency: {type: string}}
+    Transfer:
+      type: object
+      properties: {transfer_id: {type: string}, customer_id: {type: string}, beneficiary: {type: string}, amount: {type: number}, currency: {type: string}, created_at: {type: string, format: date-time}, status: {type: string}, rejection_reason: {type: string, nullable: true}}
+    CreateAccountRequest:
+      type: object
+      required: [account_type, currency, opening_id, idempotency_key]
+      additionalProperties: false
+      properties: {account_type: {type: string, enum: [CHECKING, SAVINGS]}, currency: {type: string, enum: [EUR, USD, GBP]}, opening_id: {type: string, maxLength: 100}, idempotency_key: {type: string, maxLength: 100}}
+    Error:
+      type: object
+      required: [code, message, request_id, retryable]
+      properties: {code: {type: string}, message: {type: string}, request_id: {type: string}, retryable: {type: boolean}}
