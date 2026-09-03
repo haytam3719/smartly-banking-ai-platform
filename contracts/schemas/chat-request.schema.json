@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartly.example/contracts/schemas/chat-request.schema.json",
+  "title": "ChatRequest",
+  "description": "Challenge-compatible chat input. In production customer_id must normally be derived from authenticated identity and not trusted from this field.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["customer_id", "message", "locale"],
+  "properties": {
+    "customer_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "message": { "type": "string", "minLength": 1, "maxLength": 8000 },
+    "conversation_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "locale": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$", "default": "fr-FR" }
+  }
+}

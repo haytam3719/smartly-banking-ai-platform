@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartly.example/contracts/schemas/chat-response.schema.json",
+  "title": "ChatResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["answer", "source", "sources", "conversation_id", "request_id"],
+  "properties": {
+    "answer": { "type": "string" },
+    "source": { "type": "string", "description": "Primary tool or retrieval source used to produce the answer." },
+    "sources": { "type": "array", "items": { "$ref": "evidence.schema.json" } },
+    "conversation_id": { "type": "string", "minLength": 1 },
+    "request_id": { "type": "string", "minLength": 1 }
+  }
+}

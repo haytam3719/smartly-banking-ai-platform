@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartly.example/contracts/events/ai.rag.search.completed.v1.schema.json",
+  "title": "ai.rag.search.completed.v1",
+  "allOf": [
+    { "$ref": "event-envelope.schema.json" },
+    { "required": ["conversation_id"], "properties": {
+      "event_type": { "const": "ai.rag.search.completed.v1" },
+      "payload": { "type": "object", "additionalProperties": false, "required": ["query_fingerprint", "result_count", "corpus_version", "latency_ms"], "properties": {
+        "query_fingerprint": { "type": "string", "description": "Non-reversible fingerprint; never the raw query or prompt." },
+        "result_count": { "type": "integer", "minimum": 0 },
+        "corpus_version": { "type": "string", "minLength": 1 },
+        "latency_ms": { "type": "integer", "minimum": 0 }
+      } }
+    } }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartly.example/contracts/events/ai.agent.call.completed.v1.schema.json",
+  "title": "ai.agent.call.completed.v1",
+  "allOf": [
+    { "$ref": "event-envelope.schema.json" },
+    { "required": ["conversation_id"], "properties": {
+      "event_type": { "const": "ai.agent.call.completed.v1" },
+      "payload": { "type": "object", "additionalProperties": false, "required": ["agent_id", "capability", "agent_request_id", "latency_ms"], "properties": {
+        "agent_id": { "type": "string", "minLength": 1 },
+        "capability": { "$ref": "../schemas/capability.schema.json" },
+        "agent_request_id": { "type": "string", "minLength": 1 },
+        "latency_ms": { "type": "integer", "minimum": 0 }
+      } }
+    } }
+  ]
+}

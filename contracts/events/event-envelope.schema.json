@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartly.example/contracts/events/event-envelope.schema.json",
+  "title": "EventEnvelope",
+  "description": "Privacy-minimized event envelope. Raw prompts, credentials, and unnecessary PII are prohibited.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "event_type", "occurred_at", "trace_id", "correlation_id", "service", "payload"],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "type": "string" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "trace_id": { "type": "string", "minLength": 16, "maxLength": 64 },
+    "correlation_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "conversation_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "service": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "payload": { "type": "object" }
+  }
+}

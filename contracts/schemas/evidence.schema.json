@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartly.example/contracts/schemas/evidence.schema.json",
+  "title": "Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "source", "metadata"],
+  "properties": {
+    "type": { "type": "string", "enum": ["TOOL", "RAG"] },
+    "source": { "type": "string", "minLength": 1 },
+    "content": { "type": "string" },
+    "data": { "type": ["object", "array"] },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "metadata": { "type": "object" }
+  },
+  "anyOf": [{ "required": ["content"] }, { "required": ["data"] }]
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartly.example/contracts/events/ai.route.selected.v1.schema.json",
+  "title": "ai.route.selected.v1",
+  "allOf": [
+    { "$ref": "event-envelope.schema.json" },
+    {
+      "required": ["conversation_id"],
+      "properties": {
+        "event_type": { "const": "ai.route.selected.v1" },
+        "payload": {
+          "type": "object", "additionalProperties": false,
+          "required": ["capability", "agent_id", "policy_decision"],
+          "properties": {
+            "capability": { "$ref": "../schemas/capability.schema.json" },
+            "agent_id": { "type": "string", "minLength": 1 },
+            "policy_decision": { "type": "string", "enum": ["ALLOW", "DENY"] }
+          }
+        }
+      }
+    }
+  ]
+}

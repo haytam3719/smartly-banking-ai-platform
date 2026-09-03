@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartly.example/contracts/schemas/capability.schema.json",
+  "title": "Capability",
+  "type": "string",
+  "enum": [
+    "account.balance.read",
+    "account.transactions.read",
+    "card.info.read",
+    "transfer.status.read",
+    "customer.info.read",
+    "knowledge.search",
+    "account.opening.start",
+    "account.opening.status"
+  ]
+}

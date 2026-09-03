@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartly.example/contracts/schemas/agent-request.schema.json",
+  "title": "AgentRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "correlation_id", "conversation_id", "subject", "customer_id", "capability", "arguments", "locale"],
+  "properties": {
+    "request_id": { "type": "string", "minLength": 1 },
+    "correlation_id": { "type": "string", "minLength": 1 },
+    "conversation_id": { "type": "string", "minLength": 1 },
+    "subject": { "type": "string", "minLength": 1, "description": "Verified principal or service subject initiating the call." },
+    "customer_id": { "type": "string", "minLength": 1, "description": "Effective customer identifier validated against the authentication context." },
+    "capability": { "$ref": "capability.schema.json" },
+    "arguments": { "type": "object" },
+    "locale": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$" }
+  }
+}

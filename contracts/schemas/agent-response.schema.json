@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartly.example/contracts/schemas/agent-response.schema.json",
+  "title": "AgentResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["success", "capability", "data", "error", "metadata", "latency_ms"],
+  "properties": {
+    "success": { "type": "boolean" },
+    "capability": { "$ref": "capability.schema.json" },
+    "data": { "type": ["object", "array", "string", "number", "boolean", "null"] },
+    "error": { "oneOf": [{ "$ref": "error-response.schema.json" }, { "type": "null" }] },
+    "metadata": { "type": "object" },
+    "latency_ms": { "type": "integer", "minimum": 0 }
+  },
+  "allOf": [
+    { "if": { "properties": { "success": { "const": true } }, "required": ["success"] }, "then": { "properties": { "error": { "type": "null" } } } },
+    { "if": { "properties": { "success": { "const": false } }, "required": ["success"] }, "then": { "properties": { "error": { "$ref": "error-response.schema.json" } } } }
+  ]
+}
